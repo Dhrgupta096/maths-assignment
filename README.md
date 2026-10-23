@@ -1,5 +1,7 @@
 # Subsea AUV Navigation Without GPS — Mathematics Assignment (CAT II & III)
 
+**Live Interactive Simulator:** [https://dhrgupta096.github.io/maths-assignment/](https://dhrgupta096.github.io/maths-assignment/)
+
 An interactive simulation and 5-module mathematical study on **Autonomous Underwater Vehicle (AUV) Dead Reckoning and Acoustic Kalman Filtering**.
 
 ## Problem Statement
