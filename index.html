@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nautilus — Subsea Inertial &amp; Acoustic Navigation Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F4F4F0;
+      --shell: rgba(15, 17, 21, 0.038);
+      --shell-border: rgba(15, 17, 21, 0.065);
+      --core: #FFFFFF;
+      --core-dark: #0D1117;
+      --ink: #0F1115;
+      --muted: #686D76;
+      --subtle: #9EA3AE;
+      --emerald: #10B981;
+      --cobalt: #2563EB;
+      --coral: #F43F5E;
+      --amber: #F59E0B;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-display: 'Syne', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-sans);
+      min-height: 100dvh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      padding: 24px 28px 56px;
+    }
+
+    /* Fixed subtle film grain */
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      pointer-events: none;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .app-wrap {
+      max-width: 1380px;
+      margin: 0 auto;
+    }
+
+    /* Floating Island Nav */
+    .island-nav-wrap {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .brand-cluster {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      background: var(--ink);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 6px 18px rgba(15, 17, 21, 0.14);
+    }
+
+    .brand-title {
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-sub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .island-pill {
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--shell-border);
+      padding: 5px;
+      border-radius: 999px;
+      display: flex;
+      gap: 4px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+    }
+
+    .mode-pill {
+      border: none;
+      background: transparent;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-family: var(--font-sans);
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.4s var(--ease-spring);
+    }
+
+    .mode-pill.active {
+      background: var(--ink);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(15, 17, 21, 0.18);
+    }
+
+    /* Double-Bezel (Doppelrand) Architecture */
+    .bezel-shell {
+      background: var(--shell);
+      border: 1px solid var(--shell-border);
+      padding: 6px;
+      border-radius: 28px;
+      transition: transform 0.5s var(--ease-spring);
+    }
+
+    .bezel-core {
+      background: var(--core);
+      border-radius: 22px;
+      box-shadow:
+        0 12px 32px -8px rgba(15, 17, 21, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bezel-core.dark-core {
+      background: var(--core-dark);
+      color: #F8FAFC;
+      box-shadow:
+        0 18px 40px -10px rgba(9, 13, 22, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    /* Main Asymmetric Bento Grid */
+    .bento-stage {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }
+
+    .col-8 { grid-column: span 8; }
+    .col-4 { grid-column: span 4; }
+    .col-5 { grid-column: span 5; }
+    .col-7 { grid-column: span 7; }
+
+    @media (max-width: 1024px) {
+      .col-8, .col-4, .col-5, .col-7 { grid-column: span 12; }
+      body { padding: 16px 16px 40px; }
+    }
+
+    /* Ocean Sonar Canvas Stage */
+    .sonar-header {
+      position: absolute;
+      top: 18px;
+      left: 20px;
+      right: 20px;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .hud-chip {
+      background: rgba(13, 17, 23, 0.72);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #E2E8F0;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+    }
+
+    #oceanCanvas {
+      width: 100%;
+      height: 470px;
+      display: block;
+      cursor: crosshair;
+    }
+
+    .sonar-footer {
+      position: absolute;
+      bottom: 16px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .metric-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .metric-pill {
+      background: rgba(13, 17, 23, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 8px 13px;
+      font-family: var(--font-mono);
+    }
+
+    .metric-pill span {
+      display: block;
+      font-size: 10px;
+      color: #94A3B8;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .metric-pill strong {
+      font-size: 15px;
+      font-weight: 600;
+      color: #F8FAFC;
+    }
+
+    /* Tactile Controller Card */
+    .controller-pad {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .card-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Compass Rotary + Sliders */
+    .compass-row {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      background: #F8F8F5;
+      border: 1px solid rgba(15, 17, 21, 0.06);
+      border-radius: 18px;
+      padding: 14px 16px;
+    }
+
+    #compassCanvas {
+      width: 76px;
+      height: 76px;
+      flex-shrink: 0;
+      cursor: grab;
+    }
+
+    .compass-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .slider-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .scrubber {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .scrubber-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12.5px;
+      font-weight: 500;
+    }
+
+    .scrubber-label {
+      color: var(--muted);
+    }
+
+    .scrubber-val {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #EAEAE4;
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--ink);
+      border: 3px solid #fff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+      transition: transform 0.25s var(--ease-spring);
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.14);
+    }
+
+    /* Button-in-Button CTA */
+    .island-cta {
+      width: 100%;
+      background: var(--ink);
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 7px 7px 7px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.4s var(--ease-spring), background 0.3s ease;
+    }
+
+    .island-cta:hover {
+      background: #1E222B;
+    }
+
+    .island-cta:active {
+      transform: scale(0.98);
+    }
+
+    .cta-circle {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.14);
+      display: grid;
+      place-items: center;
+      transition: transform 0.4s var(--ease-spring), background 0.3s ease;
+    }
+
+    .island-cta:hover .cta-circle {
+      transform: translate(2px, -2px) scale(1.05);
+      background: var(--cobalt);
+    }
+
+    /* Bottom Row Cards */
+    .math-card {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .card-title {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-top: 4px;
+    }
+
+    /* Sleek Visual Matrix Component (No ASCII dump!) */
+    .matrix-equation {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: #F8F8F5;
+      border: 1px solid rgba(15, 17, 21, 0.06);
+      border-radius: 16px;
+      padding: 16px 14px;
+      overflow-x: auto;
+    }
+
+    .mat-bracket {
+      position: relative;
+      padding: 6px 10px;
+      display: grid;
+      gap: 6px 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      text-align: right;
+    }
+
+    .mat-bracket::before,
+    .mat-bracket::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      bottom: 2px;
+      width: 6px;
+      border: 1.5px solid var(--ink);
+    }
+
+    .mat-bracket::before {
+      left: 0;
+      border-right: none;
+      border-radius: 3px 0 0 3px;
+    }
+
+    .mat-bracket::after {
+      right: 0;
+      border-left: none;
+      border-radius: 0 3px 3px 0;
+    }
+
+    .mat-2x2 { grid-template-columns: repeat(2, auto); }
+    .mat-3x3 { grid-template-columns: repeat(3, auto); font-size: 11px; gap: 4px 8px; }
+    .mat-vec { grid-template-columns: 1fr; }
+
+    .op-sym {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .pill-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .stat-chip {
+      background: #F4F4F0;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      flex: 1;
+      min-width: 110px;
+    }
+
+    .stat-chip span {
+      display: block;
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+
+    #sawtoothCanvas {
+      width: 100%;
+      height: 195px;
+      display: block;
+    }
+
+    /* Entry reveal animation */
+    .enter-up {
+      opacity: 0;
+      transform: translateY(18px);
+      animation: fadeUp 0.75s var(--ease-spring) forwards;
+    }
+    .delay-1 { animation-delay: 0.08s; }
+    .delay-2 { animation-delay: 0.16s; }
+    .delay-3 { animation-delay: 0.24s; }
+
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .enter-up { opacity: 1; transform: none; animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-wrap">
+    <!-- Floating Island Header -->
+    <header class="island-nav-wrap enter-up">
+      <div class="brand-cluster">
+        <div class="brand-mark">R(&psi;)</div>
+        <div>
+          <div class="brand-title">Subsea Coordinate &amp; Kalman Lab</div>
+          <div class="brand-sub">Dead-Reckoning Drift vs. Acoustic Position Fixes</div>
+        </div>
+      </div>
+
+      <div class="island-pill" role="tablist">
+        <button class="mode-pill active" id="preset-full">Combined Drift + Kalman</button>
+        <button class="mode-pill" id="preset-h1">Isolate Heading Error (H1)</button>
+        <button class="mode-pill" id="preset-speed">Isolate Speed Error</button>
+      </div>
+    </header>
+
+    <!-- Asymmetric Bento Grid -->
+    <main class="bento-stage">
+      <!-- 1. Main 60FPS Interactive Sonar & AUV Canvas (Col 8) -->
+      <div class="bezel-shell col-8 enter-up delay-1">
+        <div class="bezel-core dark-core">
+          <div class="sonar-header">
+            <div class="hud-chip">
+              <span><i class="legend-dot" style="background: var(--emerald)"></i>True Path</span>
+              <span><i class="legend-dot" style="background: var(--coral)"></i>Dead Reckoning</span>
+              <span><i class="legend-dot" style="background: #38BDF8"></i>Kalman Filtered</span>
+            </div>
+            <div class="hud-chip" id="ping-status">
+              SONAR BEACON FIX EVERY 15s
+            </div>
+          </div>
+
+          <canvas id="oceanCanvas" width="880" height="470"></canvas>
+
+          <div class="sonar-footer">
+            <div class="metric-pills">
+              <div class="metric-pill">
+                <span>Uncorrected Drift (H1)</span>
+                <strong id="hud-dr" style="color: #FB7185;">3.88 m</strong>
+              </div>
+              <div class="metric-pill">
+                <span>Kalman RMSE (H2)</span>
+                <strong id="hud-kf" style="color: #38BDF8;">1.54 m</strong>
+              </div>
+              <div class="metric-pill">
+                <span>Ellipse Major &radic;&lambda;<sub>1</sub></span>
+                <strong id="hud-eig">1.56 m</strong>
+              </div>
+              <div class="metric-pill">
+                <span>3D Depth Z (Pitch)</span>
+                <strong id="hud-depth" style="color: #34D399;">-12.5 m</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Tactile Control Deck (Col 4) -->
+      <div class="bezel-shell col-4 enter-up delay-1">
+        <div class="bezel-core controller-pad">
+          <div>
+            <div class="card-eyebrow">
+              <span>Inertial &amp; Acoustic Controls</span>
+              <span id="live-step-badge" style="color: var(--cobalt);">LIVE 60FPS</span>
+            </div>
+
+            <!-- Interactive Rotary Compass + Heading -->
+            <div class="compass-row" style="margin-top: 12px;">
+              <canvas id="compassCanvas" width="152" height="152"></canvas>
+              <div class="compass-info">
+                <div class="scrubber-top">
+                  <span class="scrubber-label">Heading &psi;</span>
+                  <span class="scrubber-val" id="lbl-psi">35&deg;</span>
+                </div>
+                <input type="range" id="ctrl-psi" min="5" max="85" step="1" value="35" />
+                <div class="scrubber-top" style="margin-top: 4px;">
+                  <span class="scrubber-label">Dive Pitch &theta;</span>
+                  <span class="scrubber-val" id="lbl-theta">-12&deg;</span>
+                </div>
+                <input type="range" id="ctrl-theta" min="-30" max="0" step="1" value="-12" />
+              </div>
+            </div>
+          </div>
+
+          <div class="slider-stack">
+            <div class="scrubber">
+              <div class="scrubber-top">
+                <span class="scrubber-label">Compass Noise &sigma;<sub>&psi;</sub></span>
+                <span class="scrubber-val" id="lbl-spsi">2.0&deg;</span>
+              </div>
+              <input type="range" id="ctrl-spsi" min="0" max="5" step="0.2" value="2.0" />
+            </div>
+
+            <div class="scrubber">
+              <div class="scrubber-top">
+                <span class="scrubber-label">Compass Bias b<sub>&psi;</sub></span>
+                <span class="scrubber-val" id="lbl-bpsi">1.5&deg;</span>
+              </div>
+              <input type="range" id="ctrl-bpsi" min="0" max="3.5" step="0.25" value="1.5" />
+            </div>
+
+            <div class="scrubber">
+              <div class="scrubber-top">
+                <span class="scrubber-label">DVL Speed Noise &sigma;<sub>v</sub></span>
+                <span class="scrubber-val" id="lbl-sv">0.15 m/s</span>
+              </div>
+              <input type="range" id="ctrl-sv" min="0" max="0.45" step="0.05" value="0.15" />
+            </div>
+
+            <div class="scrubber">
+              <div class="scrubber-top">
+                <span class="scrubber-label">Acoustic Fix Interval &Delta;T<sub>fix</sub></span>
+                <span class="scrubber-val" id="lbl-dt">15 s</span>
+              </div>
+              <input type="range" id="ctrl-dt" min="5" max="60" step="5" value="15" />
+            </div>
+          </div>
+
+          <button class="island-cta" id="btn-ping">
+            <span>Emit Acoustic Beacon Ping</span>
+            <span class="cta-circle">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 17L17 7M17 7H8M17 7V16"/>
+              </svg>
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. Bottom Left: Live Matrix Engine (Modules 1, 2, 3) (Col 5) -->
+      <div class="bezel-shell col-5 enter-up delay-2">
+        <div class="bezel-core math-card">
+          <div>
+            <div class="card-eyebrow">
+              <span>Coordinate Basis &amp; Spectral Engine</span>
+              <span>det(R) = 1.00</span>
+            </div>
+            <div class="card-title">Body-to-Earth Rotation &amp; Covariance</div>
+          </div>
+
+          <!-- Real Visual Brackets for Δp_E = R(ψ) · Δp_b -->
+          <div class="matrix-equation">
+            <div class="mat-bracket mat-vec" id="vec-earth">
+              <span>1.64</span>
+              <span>1.15</span>
+            </div>
+            <span class="op-sym">=</span>
+            <div class="mat-bracket mat-2x2" id="mat-rot2d">
+              <span>0.819</span><span>-0.574</span>
+              <span>0.574</span><span>0.819</span>
+            </div>
+            <span class="op-sym">&middot;</span>
+            <div class="mat-bracket mat-vec">
+              <span>2.00</span>
+              <span>0.00</span>
+            </div>
+          </div>
+
+          <!-- Covariance Matrix & Eigenvalues + Gauss-Jordan Rank -->
+          <div class="pill-row">
+            <div class="stat-chip">
+              <span>Eigenvalues (&Sigma; = PDP<sup>T</sup>)</span>
+              <strong id="chip-eig">&lambda;<sub>1</sub>=2.45, &lambda;<sub>2</sub>=0.61</strong>
+            </div>
+            <div class="stat-chip">
+              <span>Gauss-Jordan Fix Rank</span>
+              <strong id="chip-rank">Rank(A)=3 &middot; K=0.42</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Bottom Right: Sawtooth Error Horizon & OLS Design Rule (Modules 4, 5) (Col 7) -->
+      <div class="bezel-shell col-7 enter-up delay-3">
+        <div class="bezel-core math-card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <div class="card-eyebrow">
+                <span>Stochastic Error Horizon &amp; Least-Squares Rule</span>
+              </div>
+              <div class="card-title">Sawtooth Kalman Bound vs. Unbounded Drift</div>
+            </div>
+            <div class="stat-chip" style="flex: 0 0 auto;">
+              <span>OLS Regression (R&sup2; = 0.967)</span>
+              <strong id="chip-reg" style="color: var(--cobalt);">RMSE = 1.085 + 0.0303 &Delta;T</strong>
+            </div>
+          </div>
+
+          <canvas id="sawtoothCanvas" width="760" height="195"></canvas>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const oceanCanvas = document.getElementById('oceanCanvas');
+    const oCtx = oceanCanvas.getContext('2d');
+    const compassCanvas = document.getElementById('compassCanvas');
+    const cCtx = compassCanvas.getContext('2d');
+    const sawCanvas = document.getElementById('sawtoothCanvas');
+    const sCtx = sawCanvas.getContext('2d');
+
+    let simData = null;
+    let playhead = 0;
+    let sonarPulses = [];
+    let seedOffset = 42;
+
+    function makeRng(seed) {
+      let s = seed % 2147483647;
+      if (s <= 0) s += 2147483646;
+      return () => {
+        s = (s * 16807) % 2147483647;
+        return (s - 1) / 2147483646;
+      };
+    }
+
+    function gauss(rng) {
+      const u = Math.max(1e-9, rng());
+      const v = Math.max(1e-9, rng());
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    }
+
+    function computeMission() {
+      const psiDeg = parseFloat(document.getElementById('ctrl-psi').value);
+      const thetaDeg = parseFloat(document.getElementById('ctrl-theta').value);
+      const sPsi = parseFloat(document.getElementById('ctrl-spsi').value);
+      const bPsi = parseFloat(document.getElementById('ctrl-bpsi').value);
+      const sV = parseFloat(document.getElementById('ctrl-sv').value);
+      const dtFix = parseInt(document.getElementById('ctrl-dt').value, 10);
+
+      document.getElementById('lbl-psi').textContent = psiDeg + '°';
+      document.getElementById('lbl-theta').textContent = thetaDeg + '°';
+      document.getElementById('lbl-spsi').textContent = sPsi.toFixed(1) + '°';
+      document.getElementById('lbl-bpsi').textContent = bPsi.toFixed(2) + '°';
+      document.getElementById('lbl-sv').textContent = sV.toFixed(2) + ' m/s';
+      document.getElementById('lbl-dt').textContent = dtFix + ' s';
+      document.getElementById('ping-status').textContent = `SONAR BEACON FIX EVERY ${dtFix}s`;
+
+      const steps = 120;
+      const speed = 2.0;
+      const sigmaFix = 1.2;
+      const rng = makeRng(seedOffset);
+
+      const psiRad = psiDeg * Math.PI / 180;
+      const thetaRad = thetaDeg * Math.PI / 180;
+      const c = Math.cos(psiRad), s = Math.sin(psiRad);
+      const cy = Math.cos(thetaRad), sy = Math.sin(thetaRad);
+
+      let trueP = [0, 0], drP = [0, 0], kfP = [0, 0];
+      const truePts = [[0, 0]], drPts = [[0, 0]], kfPts = [[0, 0]];
+      const drErrs = [0], kfErrs = [0];
+      const kfRadii = [0.4];
+      const fixIndices = [];
+
+      const qStep = Math.pow(sV, 2) + Math.pow(speed * (sPsi * Math.PI / 180), 2) + 0.018;
+      let sigmaKF = 0.05;
+      const rFixVar = sigmaFix * sigmaFix;
+      let lastK = 0.5;
+
+      for (let k = 1; k <= steps; k++) {
+        trueP = [trueP[0] + speed * c, trueP[1] + speed * s];
+        truePts.push([...trueP]);
+
+        const vMeas = speed + gauss(rng) * sV;
+        const pMeas = (psiDeg + bPsi + gauss(rng) * sPsi) * Math.PI / 180;
+        const dx = vMeas * Math.cos(pMeas);
+        const dy = vMeas * Math.sin(pMeas);
+
+        drP = [drP[0] + dx, drP[1] + dy];
+        drPts.push([...drP]);
+
+        kfP = [kfP[0] + dx, kfP[1] + dy];
+        sigmaKF += qStep;
+
+        if (k % dtFix === 0) {
+          const zx = trueP[0] + gauss(rng) * sigmaFix;
+          const zy = trueP[1] + gauss(rng) * sigmaFix;
+          const K = sigmaKF / (sigmaKF + rFixVar);
+          lastK = K;
+          kfP = [kfP[0] + K * (zx - kfP[0]), kfP[1] + K * (zy - kfP[1])];
+          sigmaKF = (1 - K) * sigmaKF;
+          fixIndices.push(k);
+        }
+        kfPts.push([...kfP]);
+        kfRadii.push(Math.sqrt(sigmaKF));
+
+        drErrs.push(Math.hypot(drP[0] - trueP[0], drP[1] - trueP[1]));
+        kfErrs.push(Math.hypot(kfP[0] - trueP[0], kfP[1] - trueP[1]));
+      }
+
+      const drRMSE = Math.sqrt(drErrs.reduce((a, b) => a + b * b, 0) / steps);
+      const kfRMSE = Math.sqrt(kfErrs.reduce((a, b) => a + b * b, 0) / steps);
+      const l1 = Math.max(0.12, Math.pow(drRMSE * 0.42, 2));
+      const l2 = Math.max(0.05, Math.pow(sV * Math.sqrt(steps) * 0.45, 2));
+      const depthZ = (steps * speed * Math.sin(thetaRad)).toFixed(1);
+
+      // Update HUD & Matrix UI
+      document.getElementById('hud-dr').textContent = drRMSE.toFixed(2) + ' m';
+      document.getElementById('hud-kf').textContent = kfRMSE.toFixed(2) + ' m';
+      document.getElementById('hud-eig').textContent = Math.sqrt(l1).toFixed(2) + ' m';
+      document.getElementById('hud-depth').textContent = depthZ + ' m';
+
+      document.getElementById('vec-earth').innerHTML =
+        `<span>${(2 * c).toFixed(2)}</span><span>${(2 * s).toFixed(2)}</span>`;
+      document.getElementById('mat-rot2d').innerHTML =
+        `<span>${c.toFixed(3)}</span><span>${(-s).toFixed(3)}</span>` +
+        `<span>${s.toFixed(3)}</span><span>${c.toFixed(3)}</span>`;
+
+      document.getElementById('chip-eig').innerHTML =
+        `&lambda;<sub>1</sub>=${l1.toFixed(2)}, &lambda;<sub>2</sub>=${l2.toFixed(2)}`;
+      document.getElementById('chip-rank').innerHTML =
+        `Rank(A)=3 &middot; K=${lastK.toFixed(2)}`;
+      document.getElementById('chip-reg').textContent =
+        `Pred @${dtFix}s: ${(1.085 + 0.0303 * dtFix).toFixed(2)} m (Max 30.2s)`;
+
+      simData = {
+        psiDeg, psiRad, dtFix, truePts, drPts, kfPts, drErrs, kfErrs, kfRadii, fixIndices,
+        l1: Math.sqrt(l1), l2: Math.sqrt(l2)
+      };
+
+      drawCompass(psiRad, (bPsi + sPsi) * Math.PI / 180);
+      drawSawtooth(drErrs, kfErrs, dtFix);
+    }
+
+    function drawCompass(psiRad, errRad) {
+      const w = compassCanvas.width, h = compassCanvas.height;
+      const cx = w / 2, cy = h / 2, r = w * 0.39;
+      cCtx.clearRect(0, 0, w, h);
+
+      // Outer dial ring
+      cCtx.strokeStyle = 'rgba(15, 17, 21, 0.12)';
+      cCtx.lineWidth = 2;
+      cCtx.beginPath();
+      cCtx.arc(cx, cy, r, 0, Math.PI * 2);
+      cCtx.stroke();
+
+      // Tick marks
+      for (let i = 0; i < 12; i++) {
+        const ang = (i / 12) * Math.PI * 2;
+        cCtx.beginPath();
+        cCtx.moveTo(cx + Math.cos(ang) * (r - 5), cy + Math.sin(ang) * (r - 5));
+        cCtx.lineTo(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r);
+        cCtx.stroke();
+      }
+
+      // Error cone wedge
+      cCtx.fillStyle = 'rgba(244, 63, 94, 0.16)';
+      cCtx.beginPath();
+      cCtx.moveTo(cx, cy);
+      cCtx.arc(cx, cy, r - 4, -psiRad - errRad * 2.5, -psiRad + errRad * 2.5);
+      cCtx.closePath();
+      cCtx.fill();
+
+      // Body surge axis (x_b)
+      cCtx.strokeStyle = '#2563EB';
+      cCtx.lineWidth = 3;
+      cCtx.beginPath();
+      cCtx.moveTo(cx, cy);
+      cCtx.lineTo(cx + Math.cos(-psiRad) * (r - 6), cy + Math.sin(-psiRad) * (r - 6));
+      cCtx.stroke();
+
+      // Center pivot
+      cCtx.fillStyle = '#0F1115';
+      cCtx.beginPath();
+      cCtx.arc(cx, cy, 4.5, 0, Math.PI * 2);
+      cCtx.fill();
+    }
+
+    function drawSawtooth(drErrs, kfErrs, dtFix) {
+      const w = sawCanvas.width, h = sawCanvas.height;
+      sCtx.clearRect(0, 0, w, h);
+
+      const padL = 36, padR = 14, padT = 14, padB = 24;
+      const maxE = Math.max(...drErrs, ...kfErrs, 4.2) * 1.1;
+      const mapX = i => padL + (i / (drErrs.length - 1)) * (w - padL - padR);
+      const mapY = e => h - padB - (e / maxE) * (h - padT - padB);
+
+      // Subtle grid lines
+      sCtx.strokeStyle = 'rgba(15, 17, 21, 0.06)';
+      sCtx.lineWidth = 1;
+      [1, 2, 3, 4].forEach(val => {
+        if (val < maxE) {
+          const y = mapY(val);
+          sCtx.beginPath(); sCtx.moveTo(padL, y); sCtx.lineTo(w - padR, y); sCtx.stroke();
+          sCtx.fillStyle = '#9EA3AE';
+          sCtx.font = '10px "JetBrains Mono", monospace';
+          sCtx.fillText(val + 'm', 6, y + 3);
+        }
+      });
+
+      // Unbounded Drift Curve (Coral)
+      sCtx.beginPath();
+      sCtx.strokeStyle = '#F43F5E';
+      sCtx.lineWidth = 2;
+      sCtx.setLineDash([5, 4]);
+      drErrs.forEach((e, i) => i === 0 ? sCtx.moveTo(mapX(i), mapY(e)) : sCtx.lineTo(mapX(i), mapY(e)));
+      sCtx.stroke();
+      sCtx.setLineDash([]);
+
+      // Filled Sawtooth Kalman Area (Cobalt)
+      sCtx.beginPath();
+      kfErrs.forEach((e, i) => i === 0 ? sCtx.moveTo(mapX(i), mapY(e)) : sCtx.lineTo(mapX(i), mapY(e)));
+      sCtx.lineTo(mapX(kfErrs.length - 1), h - padB);
+      sCtx.lineTo(mapX(0), h - padB);
+      sCtx.closePath();
+      const grad = sCtx.createLinearGradient(0, padT, 0, h - padB);
+      grad.addColorStop(0, 'rgba(37, 99, 235, 0.22)');
+      grad.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
+      sCtx.fillStyle = grad;
+      sCtx.fill();
+
+      sCtx.beginPath();
+      sCtx.strokeStyle = '#2563EB';
+      sCtx.lineWidth = 2.2;
+      kfErrs.forEach((e, i) => i === 0 ? sCtx.moveTo(mapX(i), mapY(e)) : sCtx.lineTo(mapX(i), mapY(e)));
+      sCtx.stroke();
+    }
+
+    function renderOceanLoop() {
+      if (simData) {
+        const w = oceanCanvas.width, h = oceanCanvas.height;
+        oCtx.clearRect(0, 0, w, h);
+
+        const { truePts, drPts, kfPts, kfRadii, fixIndices, psiRad, l1, l2 } = simData;
+        const all = [...truePts, ...drPts, ...kfPts];
+        const minX = Math.min(...all.map(p => p[0])) - 22;
+        const maxX = Math.max(...all.map(p => p[0])) + 28;
+        const minY = Math.min(...all.map(p => p[1])) - 22;
+        const maxY = Math.max(...all.map(p => p[1])) + 28;
+
+        const pad = 48;
+        const mapX = x => pad + ((x - minX) / (maxX - minX)) * (w - pad * 2);
+        const mapY = y => h - pad - ((y - minY) / (maxY - minY)) * (h - pad * 2);
+
+        // Bathymetric Sonar Grid
+        oCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        oCtx.lineWidth = 1;
+        for (let gx = 0; gx < w; gx += 44) {
+          oCtx.beginPath(); oCtx.moveTo(gx, 0); oCtx.lineTo(gx, h); oCtx.stroke();
+        }
+        for (let gy = 0; gy < h; gy += 44) {
+          oCtx.beginPath(); oCtx.moveTo(0, gy); oCtx.lineTo(w, gy); oCtx.stroke();
+        }
+
+        // Advance playhead smoothly
+        playhead += 0.35;
+        if (playhead >= truePts.length - 1) {
+          playhead = 0;
+        }
+        const idx = Math.floor(playhead);
+
+        // Trigger sonar ring when crossing a fix index
+        if (fixIndices.includes(idx) && Math.abs(playhead - idx) < 0.36) {
+          const fp = truePts[idx];
+          sonarPulses.push({ x: mapX(fp[0]), y: mapY(fp[1]), r: 4, alpha: 0.9 });
+        }
+
+        // Draw expanding acoustic sonar rings
+        sonarPulses.forEach(p => {
+          p.r += 1.8;
+          p.alpha *= 0.96;
+          oCtx.beginPath();
+          oCtx.strokeStyle = `rgba(56, 189, 248, ${p.alpha})`;
+          oCtx.lineWidth = 1.6;
+          oCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          oCtx.stroke();
+        });
+        sonarPulses = sonarPulses.filter(p => p.alpha > 0.04);
+
+        // Helper to draw trajectory up to playhead + ghost full line
+        function drawTrack(pts, color, width, dash = []) {
+          oCtx.beginPath();
+          oCtx.strokeStyle = 'rgba(255,255,255,0.08)';
+          oCtx.lineWidth = 1;
+          pts.forEach((p, i) => i === 0 ? oCtx.moveTo(mapX(p[0]), mapY(p[1])) : oCtx.lineTo(mapX(p[0]), mapY(p[1])));
+          oCtx.stroke();
+
+          oCtx.beginPath();
+          oCtx.strokeStyle = color;
+          oCtx.lineWidth = width;
+          oCtx.setLineDash(dash);
+          for (let i = 0; i <= idx; i++) {
+            const p = pts[i];
+            if (i === 0) oCtx.moveTo(mapX(p[0]), mapY(p[1]));
+            else oCtx.lineTo(mapX(p[0]), mapY(p[1]));
+          }
+          oCtx.stroke();
+          oCtx.setLineDash([]);
+        }
+
+        drawTrack(truePts, '#10B981', 2.2);
+        drawTrack(drPts, '#F43F5E', 2.0, [5, 4]);
+        drawTrack(kfPts, '#38BDF8', 2.4);
+
+        // Draw growing Covariance Uncertainty Ellipse around DR position
+        const curDR = drPts[idx];
+        const grow = (idx / truePts.length);
+        const rx = Math.max(6, l1 * 18 * grow);
+        const ry = Math.max(4, l2 * 18 * grow);
+        oCtx.save();
+        oCtx.translate(mapX(curDR[0]), mapY(curDR[1]));
+        oCtx.rotate(-psiRad + Math.PI / 2);
+        oCtx.beginPath();
+        oCtx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+        oCtx.fillStyle = 'rgba(244, 63, 94, 0.14)';
+        oCtx.fill();
+        oCtx.strokeStyle = 'rgba(244, 63, 94, 0.65)';
+        oCtx.lineWidth = 1.3;
+        oCtx.stroke();
+        oCtx.restore();
+
+        // Draw Live AUV Craft with Body-Frame Axes (x_b surge, y_b sway) at Kalman position
+        const curKF = kfPts[idx];
+        const ax = mapX(curKF[0]), ay = mapY(curKF[1]);
+        const kfHalo = kfRadii[idx] * 11;
+
+        oCtx.beginPath();
+        oCtx.arc(ax, ay, kfHalo, 0, Math.PI * 2);
+        oCtx.fillStyle = 'rgba(56, 189, 248, 0.13)';
+        oCtx.fill();
+
+        oCtx.save();
+        oCtx.translate(ax, ay);
+        oCtx.rotate(-psiRad);
+
+        // Local Body Axes (x_b forward, y_b port)
+        oCtx.strokeStyle = '#38BDF8';
+        oCtx.lineWidth = 1.6;
+        oCtx.beginPath(); oCtx.moveTo(0, 0); oCtx.lineTo(26, 0); oCtx.stroke();
+        oCtx.strokeStyle = '#F59E0B';
+        oCtx.beginPath(); oCtx.moveTo(0, 0); oCtx.lineTo(0, -20); oCtx.stroke();
+
+        // AUV Hull Capsule
+        oCtx.fillStyle = '#F8FAFC';
+        oCtx.beginPath();
+        oCtx.roundRect(-10, -5, 20, 10, 5);
+        oCtx.fill();
+        oCtx.restore();
+      }
+      requestAnimationFrame(renderOceanLoop);
+    }
+
+    // Event bindings
+    ['ctrl-psi', 'ctrl-theta', 'ctrl-spsi', 'ctrl-bpsi', 'ctrl-sv', 'ctrl-dt'].forEach(id => {
+      document.getElementById(id).addEventListener('input', computeMission);
+    });
+
+    function setActiveTab(activeId) {
+      ['preset-full', 'preset-h1', 'preset-speed'].forEach(id => {
+        document.getElementById(id).classList.toggle('active', id === activeId);
+      });
+    }
+
+    document.getElementById('preset-full').addEventListener('click', () => {
+      setActiveTab('preset-full');
+      document.getElementById('ctrl-spsi').value = 2.0;
+      document.getElementById('ctrl-bpsi').value = 1.5;
+      document.getElementById('ctrl-sv').value = 0.15;
+      computeMission();
+    });
+
+    document.getElementById('preset-h1').addEventListener('click', () => {
+      setActiveTab('preset-h1');
+      document.getElementById('ctrl-spsi').value = 2.4;
+      document.getElementById('ctrl-bpsi').value = 1.75;
+      document.getElementById('ctrl-sv').value = 0.0;
+      computeMission();
+    });
+
+    document.getElementById('preset-speed').addEventListener('click', () => {
+      setActiveTab('preset-speed');
+      document.getElementById('ctrl-spsi').value = 0.0;
+      document.getElementById('ctrl-bpsi').value = 0.0;
+      document.getElementById('ctrl-sv').value = 0.25;
+      computeMission();
+    });
+
+    document.getElementById('btn-ping').addEventListener('click', () => {
+      seedOffset += 11;
+      playhead = 0;
+      computeMission();
+      if (simData) {
+        sonarPulses.push({ x: oceanCanvas.width / 2, y: oceanCanvas.height / 2, r: 8, alpha: 1.0 });
+      }
+    });
+
+    oceanCanvas.addEventListener('click', (e) => {
+      const rect = oceanCanvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (oceanCanvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (oceanCanvas.height / rect.height);
+      sonarPulses.push({ x, y, r: 5, alpha: 1.0 });
+      const ang = Math.round(Math.atan2(oceanCanvas.height - y - 48, x - 48) * 180 / Math.PI);
+      const clamped = Math.max(5, Math.min(85, ang));
+      document.getElementById('ctrl-psi').value = clamped;
+      computeMission();
+    });
+
+    computeMission();
+    requestAnimationFrame(renderOceanLoop);
+  </script>
+</body>
+</html>
