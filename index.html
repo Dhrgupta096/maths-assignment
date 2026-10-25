@@ -973,6 +973,13 @@
           oCtx.beginPath(); oCtx.moveTo(0, gy); oCtx.lineTo(w, gy); oCtx.stroke();
         }
 
+        // 3 Non-Collinear Seabed Acoustic Transponders (LBL Array for Module 1 Rank = 3)
+        const beacons = [
+          { label: 'B1', x: w * 0.16, y: h * 0.20 },
+          { label: 'B2', x: w * 0.84, y: h * 0.24 },
+          { label: 'B3', x: w * 0.78, y: h * 0.84 }
+        ];
+
         // Advance playhead smoothly
         playhead += 0.35;
         if (playhead >= truePts.length - 1) {
@@ -980,21 +987,46 @@
         }
         const idx = Math.floor(playhead);
 
-        // Trigger sonar ring when crossing a fix index
+        // Trigger acoustic trilateration pulses from B1, B2, B3 on fix interval
         if (fixIndices.includes(idx) && Math.abs(playhead - idx) < 0.36) {
           const fp = truePts[idx];
-          sonarPulses.push({ x: mapX(fp[0]), y: mapY(fp[1]), r: 4, alpha: 0.9 });
+          const tx = mapX(fp[0]), ty = mapY(fp[1]);
+          beacons.forEach(b => {
+            sonarPulses.push({ bx: b.x, by: b.y, tx, ty, r: 6, alpha: 0.95 });
+          });
         }
 
-        // Draw expanding acoustic sonar rings
+        // Draw Seabed Transponder Nodes (B1, B2, B3)
+        beacons.forEach(b => {
+          oCtx.fillStyle = 'rgba(56, 189, 248, 0.16)';
+          oCtx.beginPath(); oCtx.arc(b.x, b.y, 10, 0, Math.PI * 2); oCtx.fill();
+          oCtx.fillStyle = '#38BDF8';
+          oCtx.beginPath(); oCtx.arc(b.x, b.y, 3.5, 0, Math.PI * 2); oCtx.fill();
+          oCtx.fillStyle = '#94A3B8';
+          oCtx.font = '10px "JetBrains Mono", monospace';
+          oCtx.fillText(b.label, b.x + 12, b.y + 4);
+        });
+
+        // Draw acoustic range lock lines & expanding pressure rings from beacons
         sonarPulses.forEach(p => {
-          p.r += 1.8;
-          p.alpha *= 0.96;
+          p.r += 2.4;
+          p.alpha *= 0.94;
+          // Acoustic wave ring from beacon
           oCtx.beginPath();
-          oCtx.strokeStyle = `rgba(56, 189, 248, ${p.alpha})`;
-          oCtx.lineWidth = 1.6;
-          oCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          oCtx.strokeStyle = `rgba(56, 189, 248, ${p.alpha * 0.65})`;
+          oCtx.lineWidth = 1.3;
+          oCtx.arc(p.bx, p.by, p.r, 0, Math.PI * 2);
           oCtx.stroke();
+
+          // Trilateration range measurement line (Module 1: A*p = b)
+          oCtx.beginPath();
+          oCtx.setLineDash([4, 4]);
+          oCtx.strokeStyle = `rgba(56, 189, 248, ${p.alpha * 0.75})`;
+          oCtx.lineWidth = 1.2;
+          oCtx.moveTo(p.bx, p.by);
+          oCtx.lineTo(p.tx, p.ty);
+          oCtx.stroke();
+          oCtx.setLineDash([]);
         });
         sonarPulses = sonarPulses.filter(p => p.alpha > 0.04);
 
@@ -1106,20 +1138,27 @@
       computeMission();
     });
 
+    function emitBeaconTriad(tx, ty) {
+      const w = oceanCanvas.width, h = oceanCanvas.height;
+      [
+        { x: w * 0.16, y: h * 0.20 },
+        { x: w * 0.84, y: h * 0.24 },
+        { x: w * 0.78, y: h * 0.84 }
+      ].forEach(b => sonarPulses.push({ bx: b.x, by: b.y, tx, ty, r: 6, alpha: 1.0 }));
+    }
+
     document.getElementById('btn-ping').addEventListener('click', () => {
       seedOffset += 11;
       playhead = 0;
       computeMission();
-      if (simData) {
-        sonarPulses.push({ x: oceanCanvas.width / 2, y: oceanCanvas.height / 2, r: 8, alpha: 1.0 });
-      }
+      emitBeaconTriad(48, oceanCanvas.height - 48);
     });
 
     oceanCanvas.addEventListener('click', (e) => {
       const rect = oceanCanvas.getBoundingClientRect();
       const x = (e.clientX - rect.left) * (oceanCanvas.width / rect.width);
       const y = (e.clientY - rect.top) * (oceanCanvas.height / rect.height);
-      sonarPulses.push({ x, y, r: 5, alpha: 1.0 });
+      emitBeaconTriad(x, y);
       const ang = Math.round(Math.atan2(oceanCanvas.height - y - 48, x - 48) * 180 / Math.PI);
       const clamped = Math.max(5, Math.min(85, ang));
       document.getElementById('ctrl-psi').value = clamped;
