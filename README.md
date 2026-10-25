@@ -18,10 +18,19 @@ Autonomous underwater vehicles cannot use GPS because radio signals are absorbed
 | **Module 4** | **Probability, Monte Carlo & Kalman Filter** | Models Gaussian sensor noise $\mathcal{N}(0, \sigma^2)$, confirms **H1** (heading error RMSE $3.70\text{ m}$ dominates speed error RMSE $1.04\text{ m}$), and bounds drift via Bayesian Kalman updates (**H2**). |
 | **Module 5** | **Ordinary Least Squares Linear Regression** | Fits steady-state Kalman error against acoustic fix interval: $\widehat{\text{RMSE}} = 1.085 + 0.0303\,\Delta T_{\text{fix}}$ ($R^2 = 0.9671$, $\text{SE} = 0.0028$). |
 
+## Visual Overview
+
+### 1. Body-to-Earth Coordinate Transformation & Two-Leg Path
+![Body-to-Earth Coordinate Transformation](assets/fig1_coordinate_frames.svg)
+
+### 2. Unbounded Drift (H1) vs. Sawtooth Kalman Bound & OLS Design Rule (H2)
+![Sawtooth Error Bound and OLS Regression](assets/fig2_sawtooth_regression.svg)
+
 ## Files
 
-- `index.html` — 60fps interactive AUV & Sonar web simulator with live rotation matrix, covariance ellipse, and sawtooth Kalman bound chart.
+- `index.html` — 60fps interactive AUV & LBL Acoustic Sonar web simulator (`B1, B2, B3` seabed transponders, live rotation matrix, covariance ellipse, and sawtooth Kalman bound chart).
 - `auv_project.py` — Zero-dependency Python mathematical engine and 300-run Monte Carlo simulator with built-in verification assertions.
+- `assets/` — Clean SVG mathematical diagrams for presentation slides.
 
 ## Quick Start
 
